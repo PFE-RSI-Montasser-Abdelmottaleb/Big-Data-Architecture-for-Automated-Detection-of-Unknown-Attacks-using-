@@ -1,0 +1,152 @@
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.4.0
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    networks:
+      - kafka-network
+
+  kafka:
+    image: confluentinc/cp-kafka:7.4.0
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+    networks:
+      - kafka-network
+
+  mongo:
+    image: mongo:4.2
+    container_name: mongo
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: root
+    ports:
+      - "27017:27017"
+    networks:
+      - kafka-network
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.8.0
+    container_name: elasticsearch-1
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+    ports:
+      - "9200:9200"
+    networks:
+      - kafka-network
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.8.0
+    container_name: kibana-1
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    depends_on:
+      - elasticsearch
+    networks:
+      - kafka-network
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.8.0
+    container_name: logstash-1
+    ports:
+      - "5044:5044"
+    volumes:
+      - ./logstash/pipeline.conf:/usr/share/logstash/pipeline/logstash.conf:ro
+      - ./example_logs:/example_logs
+    depends_on:
+      - elasticsearch
+      - kafka
+    networks:
+      - kafka-network
+
+  simulator:
+    image: python:3.10-slim
+    container_name: simulator-1
+    volumes:
+      - ./simulator/simulate_logs.py:/app/simulate_logs.py
+    working_dir: /app
+    command: /bin/sh -c "pip install kafka-python kafka-python-log-handler && python simulate_logs.py"
+    depends_on:
+      - kafka
+    networks:
+      - kafka-network
+
+  kafka_mongo_consumer:
+    build:
+      context: ./consumer
+    container_name: kafka_mongo_consumer
+    depends_on:
+      - kafka
+      - mongo
+    networks:
+      - kafka-network
+
+  spark:
+    image: bitnami/spark:3.4
+    container_name: spark
+    volumes:
+      - ./spark_app:/app
+    working_dir: /app
+    command: >
+      bash -c "pip install pandas pyarrow requests &&
+      /opt/bitnami/spark/bin/spark-submit
+      --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.4.0,org.elasticsearch:elasticsearch-spark-30_2.12:8.8.0
+      spark_consumer.py"
+    environment:
+      - SPARK_DRIVER_MEMORY=3g
+      - SPARK_EXECUTOR_MEMORY=3g
+      - SPARK_EXECUTOR_CORES=3
+    depends_on:
+      - kafka
+      - elasticsearch
+      - flask_sup
+      - flask_unsup
+    networks:
+      - kafka-network
+  flask_sup:
+    build:
+      context: ./flask_app_sup
+    container_name: flask_sup-1
+    ports:
+      - "5001:5001"
+    volumes:
+      - ./flask_app_sup:/app
+    working_dir: /app
+    command: python flask_xgb_api.py
+    networks:
+      - kafka-network
+
+  flask_unsup:
+    build:
+      context: ./flask_app_unsup
+    container_name: flask_unsup-1
+    ports:
+      - "5002:5002"
+    volumes:
+      - ./flask_app_unsup:/app
+    working_dir: /app
+    command: python flask_if_api.py
+    networks:
+      - kafka-network
+
+
+networks:
+  kafka-network:
+    driver: bridge
