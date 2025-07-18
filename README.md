@@ -2,7 +2,7 @@
 Big Data Architecture for Automated Detection of Unknown Attacks using Spark, Kafka, and Distributed ML APIs
 
 
-#Table of Contents
+# Table of Contents
 
 Project Overview
 
@@ -22,12 +22,15 @@ Contributing
 
 *****************************************
 
-#Project Overview
+# Project Overview
+
 This project implements a scalable real-time network threat detection and enrichment system leveraging modern Big Data technologies and machine learning models. It streams network logs, applies supervised and unsupervised learning to detect known and unknown attacks, enriches event data, and indexes results for visualization and analysis.
 
 The system uses a distributed architecture combining Kafka for messaging, Spark Structured Streaming for processing, Flask APIs for ML inference, Logstash for log transformation, and Elasticsearch Kibana for visualization.
+
 ******************************************
-#Architecture
+# Architecture
+
 Kafka: Message broker for ingesting streaming network logs.
 
 Spark Structured Streaming: Processes Kafka streams, enriches logs by calling ML prediction APIs.
@@ -39,8 +42,11 @@ Logstash: Additional ingestion and enrichment, integrating with ELK stack.
 Elasticsearch & Kibana: Stores enriched logs and provides dashboards for real-time monitoring.
 
 MongoDB: Persists raw and processed logs for offline analysis.
+
 ******************************************
-#Features
+
+# Features
+
 Real-time streaming ingestion of network logs.
 
 Hybrid detection combining supervised classification and unsupervised anomaly detection.
@@ -52,8 +58,11 @@ Fault-tolerant, horizontally scalable architecture with containerization (Docker
 Visualization and alerting via Kibana dashboards.
 
 Continuous integration capability to add unknown attacks for model retraining.
+
 ******************************************
-#Technologies
+
+# Technologies
+
 Apache Kafka
 
 Apache Spark (Structured Streaming)
@@ -69,8 +78,11 @@ MongoDB
 XGBoost & Scikit-learn
 
 Isolation Forest
+
 ******************************************
-#Setup and Installation
+
+# Setup and Installation
+
 Clone the repo:
 
 bash
@@ -86,8 +98,11 @@ bash
 docker ps
 Access Kibana UI:
 Navigate to http://localhost:5601
+
 ******************************************
-#Usage
+
+# Usage
+
 The simulator service produces network logs into Kafka topic logs.
 
 Spark streaming app consumes logs, calls Flask ML APIs to get predictions, and writes enriched data to Elasticsearch.
@@ -97,8 +112,11 @@ Logstash further processes logs and pushes to ELK for visualization.
 MongoDB stores raw logs for audit and offline analysis.
 
 Kibana dashboards visualize normal and anomalous traffic, showing prediction results.
+
 ******************************************
-#Future Improvements
+
+# Future Improvements
+
 Implement active learning loop : automatically add confirmed unknown attacks to training set and retrain models.
 
 Optimize Spark UDFs for batch API calls to reduce latency.
